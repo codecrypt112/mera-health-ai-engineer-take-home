@@ -26,46 +26,53 @@ DPI = 60
 
 PROMPT = """You are an expert at reading medical lab reports.
 
-Look at this lab report and extract every test result from it.
+Look at this lab report and extract every test result from it. If more than one page
+image is given, they are pages of the same report - extract tests from every page.
 
 Return JSON in exactly this format:
 {"tests": [{"test_name": "...", "value": 0.0, "unit": "...", "reference_range": "...", "status": "normal"}]}
 
 Rules:
 - Use the standard medical name for each test.
-- value must be a number.
-- If a reference range is missing from the report, fill in the standard reference range for that test.
-- status is "normal", "high" or "low", based on the value and the reference range.
+- value is the result exactly as printed: a plain number as a number, otherwise the exact
+  text (e.g. a range like "2-3", a qualitative result like "Negative", a description like
+  "Dark Yellow"). Never collapse a range into a single average number.
+- reference_range is exactly as printed on the report. If the report does not print one for
+  a test, use null - do not invent a "standard" range; different labs and methods use
+  different ranges, and a wrong one is misleading.
+- status is "normal", "high" or "low" based on the value and the reference range, or null if
+  the value is not comparable to a range (e.g. a qualitative or descriptive result).
 - Be thorough. Do not miss any tests.
 """
 
 MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
 
-def load_image(path: Path) -> tuple[str, str]:
-    """Return (media_type, base64 data) for the report."""
+def load_images(path: Path) -> list[tuple[str, str]]:
+    """Return [(media_type, base64 data), ...] - one entry per page for a PDF."""
     if path.suffix.lower() == ".pdf":
         with tempfile.TemporaryDirectory() as directory:
             prefix = Path(directory) / "page"
             try:
-                subprocess.run(["pdftoppm", "-f", "1", "-l", "1", "-singlefile", "-r", str(DPI),
-                                "-png", str(path), str(prefix)], check=True, capture_output=True)
+                subprocess.run(["pdftoppm", "-r", str(DPI), "-png", str(path), str(prefix)],
+                                check=True, capture_output=True)
             except FileNotFoundError:
                 raise RuntimeError("Install Poppler (pdftoppm); see README.md.") from None
-            png = prefix.with_suffix(".png").read_bytes()
-        return "image/png", base64.standard_b64encode(png).decode()
-    return MEDIA_TYPES[path.suffix.lower()], base64.standard_b64encode(path.read_bytes()).decode()
+            pages = sorted(Path(directory).glob("page-*.png"),
+                            key=lambda p: int(re.search(r"-(\d+)\.png$", p.name).group(1)))
+            return [("image/png", base64.standard_b64encode(p.read_bytes()).decode()) for p in pages]
+    media_type = MEDIA_TYPES[path.suffix.lower()]
+    return [(media_type, base64.standard_b64encode(path.read_bytes()).decode())]
 
 
-def call_model(media_type: str, data: str) -> tuple[str, dict]:
-    """Return (response_text, usage) for one extraction call."""
+def call_model(images: list[tuple[str, str]]) -> tuple[str, dict]:
+    """Return (response_text, usage) for one extraction call over one or more page images."""
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("Set GEMINI_API_KEY; see README.md. No API call made.")
+    image_parts = [{"inlineData": {"mimeType": mt, "data": d}} for mt, d in images]
     body = {
-        "contents": [{"role": "user", "parts": [
-            {"inlineData": {"mimeType": media_type, "data": data}}, {"text": PROMPT},
-        ]}],
+        "contents": [{"role": "user", "parts": image_parts + [{"text": PROMPT}]}],
         "generationConfig": {"temperature": 0, "maxOutputTokens": 16000},
     }
     request = urllib.request.Request(
@@ -92,6 +99,7 @@ def log_usage(usage: dict, latency_s: float) -> None:
         "latency_s": round(latency_s, 3),
         "prompt_tokens": usage.get("promptTokenCount"),
         "completion_tokens": usage.get("candidatesTokenCount"),
+        "n_pages": usage.get("n_pages"),
     }
     print(json.dumps(record), file=sys.stderr)
 
@@ -104,11 +112,20 @@ def parse(text: str) -> list[dict]:
         return []
 
 
-def to_number(value):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
+def clean_value(value):
+    """Numbers stay numbers; anything else (a range, a qualitative result, text) is kept as
+    printed rather than discarded - schema.json allows value to be a string."""
+    if value is None:
         return None
+    if isinstance(value, (int, float)):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text.replace(",", ""))  # handles Indian-style "2,29,000" grouping
+    except ValueError:
+        return text
 
 
 def clean(tests: list[dict]) -> list[dict]:
@@ -116,7 +133,7 @@ def clean(tests: list[dict]) -> list[dict]:
     for t in tests:
         out.append({
             "test_name": str(t.get("test_name", "")).strip(),
-            "value": to_number(t.get("value")),
+            "value": clean_value(t.get("value")),
             "unit": t.get("unit") or None,
             "reference_range": t.get("reference_range") or None,
             "status": t.get("status"),
@@ -125,9 +142,10 @@ def clean(tests: list[dict]) -> list[dict]:
 
 
 def extract(path: Path) -> dict:
-    media_type, data = load_image(path)
+    images = load_images(path)
     start = time.monotonic()
-    text, usage = call_model(media_type, data)
+    text, usage = call_model(images)
+    usage["n_pages"] = len(images)
     log_usage(usage, time.monotonic() - start)
     return {"tests": clean(parse(text))}
 

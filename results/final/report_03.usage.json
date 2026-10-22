@@ -1,0 +1,8 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "latency_s": 9.887,
+  "prompt_tokens": 1377,
+  "completion_tokens": 493,
+  "n_pages": 1,
+  "wall_s": 9.982
+}
