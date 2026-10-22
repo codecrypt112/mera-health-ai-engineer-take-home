@@ -51,8 +51,12 @@ def name_similarity(a: str, b: str) -> float:
     score = fuzz.WRatio(na, nb)
     # Lab reports mix acronyms and full names for the same test (FBS vs Fasting Blood
     # Sugar, TSH vs Thyroid Stimulating Hormone) - plain fuzzy ratio under-scores these.
+    # Fuzzy (not exact) comparison against the derived acronym, since medical acronyms don't
+    # always decompose cleanly from the full name's tokens (PPBS vs "Postprandial Blood
+    # Sugar" derives "pbs" - PPBS traditionally comes from "Post Prandial", two words).
     compact_a, compact_b = na.replace(" ", ""), nb.replace(" ", "")
-    if compact_a == acronym(nb) or compact_b == acronym(na):
+    acronym_score = max(fuzz.ratio(compact_a, acronym(nb)), fuzz.ratio(compact_b, acronym(na)))
+    if acronym_score >= 80:
         score = max(score, 92)
     return score
 
@@ -104,7 +108,7 @@ def match_rows(gold_tests: list[dict], pred_tests: list[dict]):
     return matches, used_gold, used_pred
 
 
-def score_report(gold_tests: list[dict], pred_tests: list[dict]) -> dict:
+def score_report(gold_tests: list[dict], pred_tests: list[dict], failed: bool = False) -> dict:
     matches, used_gold, used_pred = match_rows(gold_tests, pred_tests)
     n_gold, n_pred = len(gold_tests), len(pred_tests)
     value_ok = unit_ok = range_ok = fully_correct = 0
@@ -118,7 +122,10 @@ def score_report(gold_tests: list[dict], pred_tests: list[dict]) -> dict:
         range_ok += r
         fully_correct += v and u and r
     recall = len(used_gold) / n_gold if n_gold else 1.0
-    precision = len(used_pred) / n_pred if n_pred else 1.0
+    # n_pred==0 is ambiguous on its own (a genuinely empty report vs. a crashed call both
+    # produce zero predictions) - `failed` disambiguates so a crash isn't scored as 100%
+    # precision just because there was nothing to be wrong about.
+    precision = 0.0 if failed else (len(used_pred) / n_pred if n_pred else 1.0)
     row_f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
     # Headline: a row only "counts" if it's matched AND the value is right - partial credit for
     # unit/range is shown separately but shouldn't inflate the number a clinician would trust.
@@ -207,7 +214,7 @@ def main():
         gold = json.loads(gold_path.read_text())["tests"]
         prediction, usage, error = run_extract(report_path, args.label, args.refresh)
         pred_tests = prediction.get("tests", [])
-        metrics = score_report(gold, pred_tests)
+        metrics = score_report(gold, pred_tests, failed=bool(error))
         metrics.update({"report": stem, "error": error, "usage": usage, "cost_usd": cost_usd(usage)})
         rows.append(metrics)
 

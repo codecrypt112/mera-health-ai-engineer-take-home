@@ -86,7 +86,11 @@ def call_model(images: list[tuple[str, str]]) -> tuple[str, dict]:
         raise RuntimeError(f"Gemini HTTP {error.code}; check API access, model and quota. See README.md.") from None
     except urllib.error.URLError:
         raise RuntimeError("Gemini connection failed; check network/TLS access and retry. See README.md.") from None
-    candidate = result.get("candidates", [{}])[0]
+    candidate = (result.get("candidates") or [{}])[0]
+    finish_reason = candidate.get("finishReason")
+    if finish_reason and finish_reason != "STOP":
+        print(f"WARNING: model finishReason={finish_reason} "
+              "(response may be truncated or blocked)", file=sys.stderr)
     text = "".join(part["text"] for part in candidate.get("content", {}).get("parts", [])
                    if "text" in part and not part.get("thought"))
     return text, (result.get("usageMetadata") or {})
@@ -109,6 +113,9 @@ def parse(text: str) -> list[dict]:
     try:
         return json.loads(match.group(0))["tests"]
     except Exception:
+        if text.strip():
+            print(f"WARNING: could not parse model output as the expected JSON "
+                  f"({len(text)} chars received) - returning zero tests", file=sys.stderr)
         return []
 
 
@@ -117,6 +124,8 @@ def clean_value(value):
     printed rather than discarded - schema.json allows value to be a string."""
     if value is None:
         return None
+    if isinstance(value, bool):  # bool is an int subclass in Python - schema has no boolean
+        return str(value)
     if isinstance(value, (int, float)):
         return value
     text = str(value).strip()
