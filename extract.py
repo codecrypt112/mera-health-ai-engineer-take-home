@@ -12,11 +12,16 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+# Model substitution: the kit's default gemini-3.8-flash returned persistent 503s (provider
+# overload) when this was built; gemini-3.5-flash-lite is the available replacement in the
+# same tier. See README.md "Provider substitution" for the measured-before-changing-behavior
+# note.
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 DPI = 60
 
 PROMPT = """You are an expert at reading medical lab reports.
@@ -52,7 +57,8 @@ def load_image(path: Path) -> tuple[str, str]:
     return MEDIA_TYPES[path.suffix.lower()], base64.standard_b64encode(path.read_bytes()).decode()
 
 
-def call_model(media_type: str, data: str) -> str:
+def call_model(media_type: str, data: str) -> tuple[str, dict]:
+    """Return (response_text, usage) for one extraction call."""
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("Set GEMINI_API_KEY; see README.md. No API call made.")
@@ -74,8 +80,20 @@ def call_model(media_type: str, data: str) -> str:
     except urllib.error.URLError:
         raise RuntimeError("Gemini connection failed; check network/TLS access and retry. See README.md.") from None
     candidate = result.get("candidates", [{}])[0]
-    return "".join(part["text"] for part in candidate.get("content", {}).get("parts", [])
+    text = "".join(part["text"] for part in candidate.get("content", {}).get("parts", [])
                    if "text" in part and not part.get("thought"))
+    return text, (result.get("usageMetadata") or {})
+
+
+def log_usage(usage: dict, latency_s: float) -> None:
+    """Emit one line of cost/latency telemetry to stderr. stdout stays pure schema JSON."""
+    record = {
+        "model": MODEL,
+        "latency_s": round(latency_s, 3),
+        "prompt_tokens": usage.get("promptTokenCount"),
+        "completion_tokens": usage.get("candidatesTokenCount"),
+    }
+    print(json.dumps(record), file=sys.stderr)
 
 
 def parse(text: str) -> list[dict]:
@@ -108,7 +126,10 @@ def clean(tests: list[dict]) -> list[dict]:
 
 def extract(path: Path) -> dict:
     media_type, data = load_image(path)
-    return {"tests": clean(parse(call_model(media_type, data)))}
+    start = time.monotonic()
+    text, usage = call_model(media_type, data)
+    log_usage(usage, time.monotonic() - start)
+    return {"tests": clean(parse(text))}
 
 
 if __name__ == "__main__":
