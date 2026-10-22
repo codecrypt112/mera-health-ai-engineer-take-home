@@ -1,0 +1,199 @@
+{
+  "label": "baseline",
+  "rows": [
+    {
+      "n_gold": 14,
+      "n_pred": 14,
+      "n_matched": 14,
+      "recall": 1.0,
+      "precision": 1.0,
+      "row_f1": 1.0,
+      "value_recall": 0.9285714285714286,
+      "value_acc": 0.9285714285714286,
+      "unit_acc": 1.0,
+      "range_acc": 1.0,
+      "fully_correct_rows": 13,
+      "report": "report_01",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 34.774,
+        "prompt_tokens": 1242,
+        "completion_tokens": 668,
+        "wall_s": 34.86
+      },
+      "cost_usd": 0.0020426
+    },
+    {
+      "n_gold": 16,
+      "n_pred": 16,
+      "n_matched": 16,
+      "recall": 1.0,
+      "precision": 1.0,
+      "row_f1": 1.0,
+      "value_recall": 1.0,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "range_acc": 1.0,
+      "fully_correct_rows": 16,
+      "report": "report_02",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 34.179,
+        "prompt_tokens": 1242,
+        "completion_tokens": 751,
+        "wall_s": 34.274
+      },
+      "cost_usd": 0.0022501
+    },
+    {
+      "n_gold": 8,
+      "n_pred": 8,
+      "n_matched": 7,
+      "recall": 0.875,
+      "precision": 0.875,
+      "row_f1": 0.875,
+      "value_recall": 0.875,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "range_acc": 0.5714285714285714,
+      "fully_correct_rows": 4,
+      "report": "report_03",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 26.559,
+        "prompt_tokens": 1242,
+        "completion_tokens": 530,
+        "wall_s": 26.644
+      },
+      "cost_usd": 0.0016976
+    },
+    {
+      "n_gold": 14,
+      "n_pred": 14,
+      "n_matched": 14,
+      "recall": 1.0,
+      "precision": 1.0,
+      "row_f1": 1.0,
+      "value_recall": 1.0,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "range_acc": 1.0,
+      "fully_correct_rows": 14,
+      "report": "report_05",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 25.119,
+        "prompt_tokens": 1242,
+        "completion_tokens": 895,
+        "wall_s": 25.546
+      },
+      "cost_usd": 0.0026101
+    },
+    {
+      "n_gold": 12,
+      "n_pred": 12,
+      "n_matched": 11,
+      "recall": 0.9166666666666666,
+      "precision": 0.9166666666666666,
+      "row_f1": 0.9166666666666666,
+      "value_recall": 0.16666666666666666,
+      "value_acc": 0.18181818181818182,
+      "unit_acc": 1.0,
+      "range_acc": 0.6363636363636364,
+      "fully_correct_rows": 2,
+      "report": "report_06",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 27.179,
+        "prompt_tokens": 1242,
+        "completion_tokens": 708,
+        "wall_s": 27.615
+      },
+      "cost_usd": 0.0021426
+    },
+    {
+      "n_gold": 6,
+      "n_pred": 6,
+      "n_matched": 6,
+      "recall": 1.0,
+      "precision": 1.0,
+      "row_f1": 1.0,
+      "value_recall": 1.0,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "range_acc": 1.0,
+      "fully_correct_rows": 6,
+      "report": "report_08",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 62.672,
+        "prompt_tokens": 1242,
+        "completion_tokens": 371,
+        "wall_s": 62.714
+      },
+      "cost_usd": 0.0013001
+    },
+    {
+      "n_gold": 14,
+      "n_pred": 14,
+      "n_matched": 14,
+      "recall": 1.0,
+      "precision": 1.0,
+      "row_f1": 1.0,
+      "value_recall": 1.0,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "range_acc": 1.0,
+      "fully_correct_rows": 14,
+      "report": "report_09",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 24.765,
+        "prompt_tokens": 1242,
+        "completion_tokens": 906,
+        "wall_s": 24.81
+      },
+      "cost_usd": 0.0026376
+    },
+    {
+      "n_gold": 54,
+      "n_pred": 30,
+      "n_matched": 30,
+      "recall": 0.5555555555555556,
+      "precision": 1.0,
+      "row_f1": 0.7142857142857143,
+      "value_recall": 0.5555555555555556,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "range_acc": 1.0,
+      "fully_correct_rows": 30,
+      "report": "report_11",
+      "error": null,
+      "usage": {
+        "model": "gemini-3.5-flash-lite",
+        "latency_s": 35.134,
+        "prompt_tokens": 1242,
+        "completion_tokens": 1901,
+        "wall_s": 35.227
+      },
+      "cost_usd": 0.0051251000000000005
+    }
+  ],
+  "mean": {
+    "recall": 0.9184027777777778,
+    "precision": 0.9739583333333334,
+    "row_f1": 0.9382440476190477,
+    "value_recall": 0.8157242063492064,
+    "value_acc": 0.8887987012987013,
+    "unit_acc": 1.0,
+    "range_acc": 0.900974025974026
+  },
+  "total_cost_usd": 0.019805800000000002
+}
