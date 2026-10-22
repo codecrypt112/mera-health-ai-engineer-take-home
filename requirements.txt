@@ -1,1 +1,5 @@
-# No Python packages required. Python 3.10+ and Poppler (pdftoppm) are needed.
+# extract.py itself needs no Python packages (stdlib only, unchanged from the starter kit).
+# Python 3.10+ and Poppler (pdftoppm) are needed.
+#
+# eval.py (scoring harness, not the entry point) additionally needs:
+rapidfuzz
